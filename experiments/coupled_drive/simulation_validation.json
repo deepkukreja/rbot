@@ -1,0 +1,88 @@
+{
+  "environment": "WSL Ubuntu 24.04, ROS 2 Jazzy, Gazebo Harmonic, guarded rbot development runtime",
+  "scope": "Isolated simulator only",
+  "reconstructed_files": 97,
+  "controller_version": "4.40.1",
+  "mppi_version": "1.3.12",
+  "rebuilt_library_sha256": {
+    "diff_drive_controller": "c220d0571e9ac63beddcd826ec4557d5471c2bd65c306a213df6cb9f47cc5caf",
+    "nav2_mppi_controller": "857bf12dd613f05b688dd2debfaca16c43b670af5fbbf5c445be1235dff788e5"
+  },
+  "configuration_sha256": {
+    "controllers.yaml": "0a1a62c1d07c130d3ed2e74805efc46d79ee06e4cc8528ea92d6db9045006006",
+    "nav2_params.yaml": "6e1cbdfcda1b8548037e830b4187055aab1990ae1965488c87edffd10b35f64a"
+  },
+  "checks": [
+    {
+      "case": "turn-to-straight leased input",
+      "scenario_passed": false,
+      "scenario_checks_passed": 9,
+      "scenario_checks_total": 10,
+      "failed_checks": [
+        "wheel_standstill_within_declared_deadline"
+      ],
+      "peak_limited_wheel_rad_s": 4.999999999999991,
+      "peak_raw_planner_wheel_rad_s": null,
+      "peak_gazebo_joint_rad_s": 4.999999999685785,
+      "observed_axis_rates": {
+        "linear_m_s2": 1.0000000000001603,
+        "angular_rad_s2": 3.20000000000037
+      },
+      "zero_output_latency_s": 0.3191305049986113,
+      "wheel_standstill_latency_s": 1.6225903269951232,
+      "zero_output_deadline_s": 0.85,
+      "wheel_standstill_deadline_s": 1.5,
+      "deserialized_bag_records": 10388,
+      "owned_processes_cleaned_up": true
+    },
+    {
+      "case": "Nav2 frozen scan during motion",
+      "scenario_passed": true,
+      "scenario_checks_passed": 12,
+      "scenario_checks_total": 12,
+      "failed_checks": [],
+      "peak_limited_wheel_rad_s": 3.4764216471000573,
+      "peak_raw_planner_wheel_rad_s": 3.4764216471000573,
+      "peak_gazebo_joint_rad_s": 3.476421646428886,
+      "observed_axis_rates": {
+        "linear_m_s2": 1.0000000000000617,
+        "angular_rad_s2": 0.48546013740420374
+      },
+      "zero_output_latency_s": 0.50202944099874,
+      "wheel_standstill_latency_s": 1.1597401479957625,
+      "zero_output_deadline_s": 0.85,
+      "wheel_standstill_deadline_s": 1.5,
+      "deserialized_bag_records": 8096,
+      "owned_processes_cleaned_up": true
+    }
+  ],
+  "transition_clock_comparison": [
+    {
+      "case": "earlier_transition",
+      "zero_latency_wall_s": 0.3279202470002929,
+      "wheel_standstill_wall_s": 1.422415433000424,
+      "last_moving_sample_latency_wall_s": 1.339476619999914,
+      "wheel_acquisition_sim_s_near_zero_to_standstill": 0.40000000000000036,
+      "wall_s_between_same_wheel_samples": 1.071926306001842,
+      "sim_over_wall": 0.37315998101768105,
+      "zero_anchor_receipt_distance_s": 0.02256887999828905,
+      "stop_anchor_receipt_distance_s": 0.0
+    },
+    {
+      "case": "rebuilt_transition",
+      "zero_latency_wall_s": 0.3191305049986113,
+      "wheel_standstill_wall_s": 1.6225903269951232,
+      "last_moving_sample_latency_wall_s": 1.5477015389988082,
+      "wheel_acquisition_sim_s_near_zero_to_standstill": 0.41000000000000014,
+      "wall_s_between_same_wheel_samples": 1.3036582979984814,
+      "sim_over_wall": 0.3144995898307685,
+      "zero_anchor_receipt_distance_s": 0.00019847600196953863,
+      "stop_anchor_receipt_distance_s": 0.0
+    }
+  ],
+  "limitations": [
+    "The rebuilt transition missed the unchanged 1.5 s wall-clock standstill deadline.",
+    "Prior private trial encountered a joint-state broadcaster startup timeout before motion.",
+    "Production scheduler timing and physical hardware stopping are unqualified."
+  ]
+}

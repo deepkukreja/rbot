@@ -1,0 +1,398 @@
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -12,6 +12,7 @@
+ # set(XTENSOR_DEFAULT_TRAVERSAL row_major)  # row_major, column_major
+ 
+ find_package(ament_cmake REQUIRED)
++find_package(rlai_drive_constraints REQUIRED)
+ find_package(xsimd REQUIRED)
+ find_package(xtensor REQUIRED)
+ 
+@@ -67,6 +68,7 @@
+ # If building one the same hardware to be deployed on, try `-march=native`!
+ add_compile_options(-O3 -finline-limit=10000000 -ffp-contract=fast -ffast-math -mtune=generic)
+ 
++include_directories(${rlai_drive_constraints_INCLUDE_DIRS})
+ add_library(mppi_controller SHARED
+   src/controller.cpp
+   src/optimizer.cpp
+@@ -105,6 +107,8 @@
+   ament_target_dependencies(${lib} ${dependencies_pkgs})
+ endforeach()
+ 
++install(FILES LOCAL_PATCH.md DESTINATION share/${PROJECT_NAME})
++
+ install(TARGETS mppi_controller mppi_critics
+   ARCHIVE DESTINATION lib
+   LIBRARY DESTINATION lib
+@@ -121,11 +125,21 @@
+   set(ament_cmake_copyright_FOUND TRUE)
+   ament_lint_auto_find_test_dependencies()
+   add_subdirectory(test)
++  add_executable(command_bounds_probe test/command_bounds_probe.cpp)
++  target_link_libraries(command_bounds_probe mppi_controller)
++  # Keep test-side NaN assertions meaningful under the production fast-math build.
++  target_compile_options(command_bounds_probe PRIVATE -fno-fast-math)
++  ament_target_dependencies(command_bounds_probe ${dependencies_pkgs})
++  add_test(NAME command_bounds_probe
++    COMMAND command_bounds_probe --ros-args --log-level error)
++  set_tests_properties(command_bounds_probe PROPERTIES ENVIRONMENT "ROS_DOMAIN_ID=101")
+   # add_subdirectory(benchmark)
+ endif()
+ 
+ ament_export_libraries(${libraries})
+-ament_export_dependencies(${dependencies_pkgs})
++ament_export_dependencies(
++  rlai_drive_constraints
++  ${dependencies_pkgs})
+ ament_export_include_directories(include)
+ pluginlib_export_plugin_description_file(nav2_core mppic.xml)
+ pluginlib_export_plugin_description_file(nav2_mppi_controller critics.xml)
+--- a/package.xml
++++ b/package.xml
+@@ -9,6 +9,7 @@
+   <license>MIT</license>
+ 
+   <buildtool_depend>ament_cmake</buildtool_depend>
++  <depend>rlai_drive_constraints</depend>
+   <buildtool_depend>ament_cmake_ros</buildtool_depend>
+ 
+   <depend>rclcpp</depend>
+--- a/src/optimizer.cpp
++++ b/src/optimizer.cpp
+@@ -15,6 +15,8 @@
+ #include "nav2_mppi_controller/optimizer.hpp"
+ 
+ #include <limits>
++#include <cstdint>
++#include <cstring>
+ #include <memory>
+ #include <stdexcept>
+ #include <string>
+@@ -175,6 +177,32 @@
+   } while (fallback(critics_data_.fail_flag));
+ 
+   utils::savitskyGolayFilter(control_sequence_, control_history_, settings_);
++
++  // This target uses -ffast-math. Inspect IEEE bits so the compiler cannot
++  // erase non-finite rejection before saturation.
++  const auto finite = [](float value) {
++      static_assert(sizeof(float) == sizeof(uint32_t) &&
++        std::numeric_limits<float>::is_iec559, "IEEE-754 float required");
++      uint32_t bits;
++      std::memcpy(&bits, &value, sizeof(bits));
++      return (bits & 0x7f800000u) != 0x7f800000u;
++    };
++  for (size_t i = 0; i < control_sequence_.vx.size(); ++i) {
++    if (!finite(control_sequence_.vx(i)) || !finite(control_sequence_.vy(i)) ||
++      !finite(control_sequence_.wz(i)))
++    {
++      throw nav2_core::NoValidControl("Non-finite smoothed MPPI control sequence");
++    }
++  }
++
++  // Smoothing can overshoot an already constrained sequence. Enforce the
++  // current (including dynamic speed) constraints on the final sequence.
++  applyControlSequenceConstraints();
++  auto * diff = dynamic_cast<DiffDriveMotionModel *>(motion_model_.get());
++  const unsigned int offset =
++    (diff && diff->coupledWheelLimitsEnabled()) ? 0 : (settings_.shift_control_sequence ? 1 : 0);
++  control_history_.back() = {
++    control_sequence_.vx(offset), control_sequence_.vy(offset), control_sequence_.wz(offset)};
+   auto control = getControlFromSequenceAsTwist(plan.header.stamp);
+ 
+   if (settings_.shift_control_sequence) {
+@@ -304,7 +332,12 @@
+     }
+   }
+ 
+-  motion_model_->applyConstraints(control_sequence_);
++  auto * diff = dynamic_cast<DiffDriveMotionModel *>(motion_model_.get());
++  if (diff && diff->coupledWheelLimitsEnabled()) {
++    diff->constrainSequence(control_sequence_, state_.speed.linear.x, state_.speed.angular.z);
++  } else {
++    motion_model_->applyConstraints(control_sequence_);
++  }
+ }
+ 
+ void Optimizer::updateStateVelocities(
+@@ -448,7 +481,9 @@
+ geometry_msgs::msg::TwistStamped Optimizer::getControlFromSequenceAsTwist(
+   const builtin_interfaces::msg::Time & stamp)
+ {
+-  unsigned int offset = settings_.shift_control_sequence ? 1 : 0;
++  auto * diff = dynamic_cast<DiffDriveMotionModel *>(motion_model_.get());
++  unsigned int offset =
++    (diff && diff->coupledWheelLimitsEnabled()) ? 0 : (settings_.shift_control_sequence ? 1 : 0);
+ 
+   auto vx = control_sequence_.vx(offset);
+   auto wz = control_sequence_.wz(offset);
+@@ -464,7 +499,7 @@
+ void Optimizer::setMotionModel(const std::string & model)
+ {
+   if (model == "DiffDrive") {
+-    motion_model_ = std::make_shared<DiffDriveMotionModel>();
++    motion_model_ = std::make_shared<DiffDriveMotionModel>(parameters_handler_, name_);
+   } else if (model == "Omni") {
+     motion_model_ = std::make_shared<OmniMotionModel>();
+   } else if (model == "Ackermann") {
+--- a/include/nav2_mppi_controller/motion_models.hpp
++++ b/include/nav2_mppi_controller/motion_models.hpp
+@@ -17,6 +17,10 @@
+ 
+ #include <cstdint>
+ #include <string>
++#include <stdexcept>
++#include "nav2_core/controller_exceptions.hpp"
++#include "rlai_drive_constraints/wheel_envelope.hpp"
++#define RLAI_COUPLED_DIFF_DRIVE 1
+ 
+ #include "nav2_mppi_controller/models/control_sequence.hpp"
+ #include "nav2_mppi_controller/models/state.hpp"
+@@ -194,18 +198,96 @@
+ class DiffDriveMotionModel : public MotionModel
+ {
+ public:
+-  /**
+-    * @brief Constructor for mppi::DiffDriveMotionModel
+-    */
+   DiffDriveMotionModel() = default;
+-
+-  /**
+-   * @brief Whether the motion model is holonomic, using Y axis
+-   * @return Bool If holonomic
+-   */
+-  bool isHolonomic() override
+-  {
+-    return false;
++  explicit DiffDriveMotionModel(ParametersHandler * handler, const std::string & name)
++  {
++    if (!handler) {return;}
++    auto get = handler->getParamGetter(name + ".DiffDriveConstraints");
++    double cap = 0.0;
++    get(cap, "max_wheel_velocity", 0.0, ParameterType::Static);
++    if (!rlai_drive_constraints::finite(cap) || cap < 0.0) {
++      throw std::invalid_argument("Invalid coupled wheel speed cap");
++    }
++    if (cap == 0.0) {return;}
++    double separation = 0.0, left = 0.0, right = 0.0;
++    get(separation, "wheel_separation", 0.0, ParameterType::Static);
++    get(left, "left_wheel_radius", 0.0, ParameterType::Static);
++    get(right, "right_wheel_radius", 0.0, ParameterType::Static);
++    configureWheelLimits(separation, left, right, cap);
++  }
++  bool isHolonomic() override {return false;}
++  bool coupledWheelLimitsEnabled() const {return coupled_;}
++  void configureWheelLimits(double separation, double left, double right, double cap)
++  {
++    envelope_ = {static_cast<float>(separation), static_cast<float>(left),
++      static_cast<float>(right), static_cast<float>(cap)};
++    if (!envelope_.valid()) {throw std::invalid_argument("Invalid coupled wheel geometry");}
++    coupled_ = true;
++  }
++  void constrainSequence(models::ControlSequence & sequence, float initial_v, float initial_w)
++  {
++    normalizeInitial(initial_v, initial_w);
++    for (size_t i = 0; i < sequence.vx.size(); ++i) {
++      advance(initial_v, initial_w, sequence.vx(i), sequence.wz(i));
++      sequence.vx(i) = initial_v;
++      sequence.wz(i) = initial_w;
++    }
++  }
++  void predict(models::State & state) override
++  {
++    if (!coupled_) {MotionModel::predict(state);return;}
++    for (size_t i = 0; i < state.vx.shape(0); ++i) {
++      float v = state.vx(i, 0), w = state.wz(i, 0);
++      // Keep the measured column intact. Normalize only the future feasible
++      // model anchor when noisy speed feedback lies outside configured limits.
++      normalizeInitial(v, w);
++      for (size_t j = 1; j < state.vx.shape(1); ++j) {
++        advance(v, w, state.cvx(i, j - 1), state.cwz(i, j - 1));
++        state.cvx(i, j - 1) = state.vx(i, j) = v;
++        state.cwz(i, j - 1) = state.wz(i, j) = w;
++      }
++    }
++  }
++private:
++  bool coupled_{false};
++  rlai_drive_constraints::WheelEnvelope<float> envelope_{};
++  void normalizeInitial(float & v, float & w) const
++  {
++    if (!rlai_drive_constraints::finite(v) || !rlai_drive_constraints::finite(w)) {
++      throw nav2_core::NoValidControl("Non-finite coupled initial velocity");
++    }
++    v = std::clamp(v, control_constraints_.vx_min, control_constraints_.vx_max);
++    w = std::clamp(w, -control_constraints_.wz, control_constraints_.wz);
++    if (!envelope_.project(v, w)) {
++      throw nav2_core::NoValidControl("Invalid coupled initial velocity");
++    }
++  }
++  void advance(float & previous_v, float & previous_w, float target_v, float target_w) const
++  {
++    const auto & c = control_constraints_;
++    if (!rlai_drive_constraints::finite(model_dt_) || model_dt_ <= 0.0f ||
++      !rlai_drive_constraints::finite(target_v) || !rlai_drive_constraints::finite(target_w))
++    {
++      throw nav2_core::NoValidControl("Invalid coupled target or period");
++    }
++    target_v = std::clamp(target_v, c.vx_min, c.vx_max);
++    target_w = std::clamp(target_w, -c.wz, c.wz);
++    if (!envelope_.project(target_v, target_w)) {
++      throw nav2_core::NoValidControl("Invalid coupled target");
++    }
++    const float lower = previous_v > 0 ? c.ax_min : -c.ax_max;
++    const float upper = previous_v > 0 ? c.ax_max : -c.ax_min;
++    const float limited_v = std::clamp(target_v,
++      previous_v + model_dt_ * lower, previous_v + model_dt_ * upper);
++    const float limited_w = std::clamp(target_w,
++      previous_w - model_dt_ * c.az_max, previous_w + model_dt_ * c.az_max);
++    float next_v, next_w;
++    if (!envelope_.step(previous_v, previous_w, target_v, target_w,
++      limited_v, limited_w, next_v, next_w))
++    {
++      throw nav2_core::NoValidControl("Invalid coupled transition");
++    }
++    previous_v = next_v;previous_w = next_w;
+   }
+ };
+ 
+--- a/include/nav2_mppi_controller/optimizer.hpp
++++ b/include/nav2_mppi_controller/optimizer.hpp
+@@ -247,7 +247,7 @@
+ 
+   std::shared_ptr<MotionModel> motion_model_;
+ 
+-  ParametersHandler * parameters_handler_;
++  ParametersHandler * parameters_handler_{nullptr};
+   CriticManager critic_manager_;
+   NoiseGenerator noise_generator_;
+ 
+--- /dev/null
++++ b/test/command_bounds_probe.cpp
+@@ -0,0 +1,91 @@
++// SPDX-License-Identifier: Apache-2.0
++
++#include <array>
++#include <cmath>
++#include <iostream>
++#include <iomanip>
++#include <limits>
++#include <memory>
++#include <string>
++#include "nav2_mppi_controller/optimizer.hpp"
++
++class Probe : public mppi::Optimizer {
++public:
++  Probe(
++    std::shared_ptr<nav2_costmap_2d::Costmap2DROS> map, int axis, float target,
++    bool shifted, float ratio = 1.f, bool invalid = false, bool constant = false)
++  {
++    costmap_ros_ = map;
++    settings_.time_steps = 56;settings_.batch_size = 1;settings_.model_dt = .05f;
++    // Isolate the real native finalization from stochastic optimization.
++    settings_.iteration_count = 0;settings_.shift_control_sequence = shifted;
++    settings_.base_constraints = {.5f, -.35f, 0.f, 1.9f, 3.f, -3.f, 3.f, -3.f, 3.5f};
++    settings_.constraints = settings_.base_constraints;
++    setMotionModel("DiffDrive");
++    if(ratio != 1.f) {setSpeedLimit(ratio * 100., true);}
++    control_sequence_.reset(56);state_.reset(1, 56);costs_ = xt::zeros<float>({1});
++    const float step = constant ? 0.f : (target < 0 ? -.1f : .1f);
++    control_history_.fill({0.f, 0.f, 0.f});
++    for(int i = 0; i < 4; ++i) {
++      if(axis == 0) {control_history_[i].vx = target - step * (3 - i);} else {
++        control_history_[i].wz = target - step * (3 - i);
++      }
++    }
++    if(axis == 0) {control_sequence_.vx.fill(target);} else {control_sequence_.wz.fill(target);}
++    if(invalid) {control_sequence_.wz(1) = std::numeric_limits<float>::quiet_NaN();}
++  }
++  auto run()
++  {
++    geometry_msgs::msg::PoseStamped pose;pose.pose.orientation.w = 1.;
++    nav_msgs::msg::Path path;path.header.frame_id = "map";path.header.stamp.sec = 7;
++    path.poses = {pose, pose};
++    geometry_msgs::msg::Twist speed;speed.linear.x = control_history_[3].vx;
++    speed.angular.z = control_history_[3].wz;
++    return evalControl(pose, speed, path, pose.pose, nullptr);
++  }
++  auto history() {return control_history_[3];}
++};
++int main(int argc, char **argv)
++{
++  rclcpp::init(argc, argv);
++  auto map = std::make_shared<nav2_costmap_2d::Costmap2DROS>("bounds_probe_costmap");
++  struct Case{const char *name;int axis;float target;bool shift;float ratio;bool invalid;
++    bool constant = false;};
++  const std::array<Case, 10> cases{{
++    {"turn_positive_shift", 2, 1.9f, true, 1.f, false},
++    {"turn_negative_shift", 2, -1.9f, true, 1.f, false},
++    {"forward_shift", 0, .5f, true, 1.f, false}, {"reverse_shift", 0, -.35f, true, 1.f, false},
++    {"turn_positive_unshifted", 2, 1.9f, false, 1.f, false},
++    {"reverse_unshifted", 0, -.35f, false, 1.f, false},
++    {"reduced_speed_limit", 2, .95f, true, .5f, false},
++    {"inside_limit", 2, .5f, true, 1.f, false, true},
++    {"nonfinite_sequence", 2, 1.f, true, 1.f, true},
++    {"nonfinite_sequence_unshifted", 2, 1.f, false, 1.f, true}}};
++  int failures = 0;std::cout << std::setprecision(12) << "[";bool first = true;
++  for(const auto & c:cases) {
++    Probe probe(map, c.axis, c.target, c.shift, c.ratio, c.invalid, c.constant);
++    bool threw = false, passed = false;double value = 0, history = 0;
++    try {
++      const auto command = probe.run();
++      value = c.axis == 0 ? command.twist.linear.x : command.twist.angular.z;
++      history = c.axis == 0 ? probe.history().vx : probe.history().wz;
++      const double lower = c.axis == 0 ? -.35 * c.ratio : -1.9 * c.ratio;
++      const double upper = c.axis == 0 ? .5 * c.ratio : 1.9 * c.ratio;
++      passed = !c.invalid && std::isfinite(value) && value >= lower && value <= upper &&
++        std::isfinite(history) && std::abs(history - value) < 1e-7 && command.header.stamp.sec == 7;
++      if(std::string(c.name) == "inside_limit") {passed = passed && std::abs(value - .5) < 1e-6;}
++    } catch(const nav2_core::NoValidControl &) {
++      threw = true;passed = c.invalid;
++    }
++    if(!passed) {++failures;}
++    if(!first) {std::cout << ",";} first = false;
++    std::cout << "{\"name\":\"" << c.name << "\",\"value\":";
++    if(std::isfinite(value)) {std::cout << value;} else {std::cout << "null";}
++    std::cout << ",\"history\":";if(std::isfinite(history)) {std::cout << history;} else {
++      std::cout << "null";
++    }
++    std::cout << ",\"threw\":" << (threw ? "true" : "false") << ",\"passed\":" <<
++      (passed ? "true" : "false") << "}";
++  }
++  std::cout << "]\n";map.reset();rclcpp::shutdown();return failures ? 1 : 0;
++}
+--- /dev/null
++++ b/LOCAL_PATCH.md
+@@ -0,0 +1,21 @@
++# Local post-filter command bounds patch
++
++Based on ros-navigation/navigation2 tag 1.3.12. Retain upstream attribution.
++Optimizer::evalControl now rejects non-finite smoothed controls, reapplies its
++existing current constraints after Savitzky-Golay smoothing, and stores the
++bounded emitted control in history. This preserves its existing speed-limit
++settings, command stamp, shift and public ABI. It does not change supervisor
++admission, velocity ceilings or command ownership.
++
++The integer float classifier is intentional: this package enables fast math,
++which can remove std::isfinite checks. The native command_bounds_probe covers
++shifted/unshifted output, signed linear/turn limits, a dynamic reduction,
++interior controls, history consistency and non-finite rejection. It disables
++optimizer iterations only in the fixture, to isolate real native finalization.
++Run the test in a private ROS domain with the project's loopback UDP wrapper.
++This test has an unconfigured costmap node and no drive publisher.
++
++The earlier historical packet's full optimizer sequence was not captured.
++This reproduces and fixes a concrete native overshoot mechanism, not every
++possible source of invalid Nav2 velocity. Physical stopping and source-health
++failures remain separate evidence and are not fixed by command saturation.
+--- /dev/null
++++ b/COUPLED_PATCH.md
+@@ -0,0 +1,7 @@
++# Local optional coupled DiffDrive profile
++Preserves the earlier post-SG finite/box correction and legacy disabled behavior.
++DiffDriveConstraints adds static wheel geometry/cap. Predict noisy samples and
++constrain final sequences with the shared convex-progress primitive. Normalize
++only future model anchors for out-of-range speed feedback; do not alter ROS
++measurements. The coupled profile consumes sample zero and shifts warm starts
++after emission, so history and the emitted first predicted rate step agree.

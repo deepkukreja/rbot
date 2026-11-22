@@ -1,0 +1,127 @@
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -7,6 +7,7 @@
+ 
+ set(THIS_PACKAGE_INCLUDE_DEPENDS
+   control_toolbox
++  rlai_drive_constraints
+   controller_interface
+   generate_parameter_library
+   geometry_msgs
+@@ -48,6 +49,7 @@
+ target_link_libraries(diff_drive_controller
+   PUBLIC
+     diff_drive_controller_parameters
++    rlai_drive_constraints::rlai_drive_constraints
+     control_toolbox::rate_limiter_parameters
+     control_toolbox::control_toolbox
+     controller_interface::controller_interface
+--- a/package.xml
++++ b/package.xml
+@@ -21,6 +21,7 @@
+   <author email="jordan.palacios@pal-robotics.com">Jordan Palacios</author>
+ 
+   <buildtool_depend>ament_cmake</buildtool_depend>
++  <depend>rlai_drive_constraints</depend>
+ 
+   <build_depend>generate_parameter_library</build_depend>
+   <build_depend>ros2_control_cmake</build_depend>
+--- a/src/diff_drive_controller.cpp
++++ b/src/diff_drive_controller.cpp
+@@ -23,6 +23,7 @@
+ #include <vector>
+ 
+ #include "diff_drive_controller/diff_drive_controller.hpp"
++#include "rlai_drive_constraints/wheel_envelope.hpp"
+ #include "hardware_interface/types/hardware_interface_type_values.hpp"
+ #include "lifecycle_msgs/msg/state.hpp"
+ #include "rclcpp/logging.hpp"
+@@ -161,8 +162,38 @@
+   double & last_angular = previous_two_commands_.back()[1];
+   double & second_to_last_angular = previous_two_commands_.front()[1];
+ 
+-  limiter_linear_->limit(linear_command, last_linear, second_to_last_linear, period.seconds());
+-  limiter_angular_->limit(angular_command, last_angular, second_to_last_angular, period.seconds());
++  if (params_.coupled_wheel_velocity_limit > 0.0)
++  {
++    const rlai_drive_constraints::WheelEnvelope<double> envelope{
++      params_.wheel_separation * params_.wheel_separation_multiplier,
++      params_.wheel_radius * params_.left_wheel_radius_multiplier,
++      params_.wheel_radius * params_.right_wheel_radius_multiplier,
++      params_.coupled_wheel_velocity_limit};
++    double target_linear = linear_command;
++    double target_angular = angular_command;
++    limiter_linear_->limit_velocity(target_linear);
++    limiter_angular_->limit_velocity(target_angular);
++    bool valid = envelope.project(target_linear, target_angular);
++    double limited_linear = target_linear;
++    double limited_angular = target_angular;
++    limiter_linear_->limit(limited_linear, last_linear, second_to_last_linear, period.seconds());
++    limiter_angular_->limit(limited_angular, last_angular, second_to_last_angular, period.seconds());
++    valid = valid && envelope.step(
++      last_linear, last_angular, target_linear, target_angular,
++      limited_linear, limited_angular, linear_command, angular_command);
++    if (!valid)
++    {
++      linear_command = 0.0;
++      angular_command = 0.0;
++      RCLCPP_ERROR_THROTTLE(logger, *get_node()->get_clock(), 1000,
++        "Invalid coupled wheel state; emitting zero");
++    }
++  }
++  else
++  {
++    limiter_linear_->limit(linear_command, last_linear, second_to_last_linear, period.seconds());
++    limiter_angular_->limit(angular_command, last_angular, second_to_last_angular, period.seconds());
++  }
+   previous_two_commands_.pop();
+   previous_two_commands_.push({{linear_command, angular_command}});
+ 
+@@ -427,6 +458,23 @@
+     return controller_interface::CallbackReturn::ERROR;
+   }
+ 
++  if (params_.coupled_wheel_velocity_limit > 0.0)
++  {
++    const rlai_drive_constraints::WheelEnvelope<double> envelope{
++      params_.wheel_separation * params_.wheel_separation_multiplier,
++      params_.wheel_radius * params_.left_wheel_radius_multiplier,
++      params_.wheel_radius * params_.right_wheel_radius_multiplier,
++      params_.coupled_wheel_velocity_limit};
++    if (!envelope.valid() ||
++      rlai_drive_constraints::finite(params_.linear.x.max_jerk) ||
++      rlai_drive_constraints::finite(params_.linear.x.min_jerk) ||
++      rlai_drive_constraints::finite(params_.angular.z.max_jerk) ||
++      rlai_drive_constraints::finite(params_.angular.z.min_jerk))
++    {
++      RCLCPP_ERROR(logger, "Coupled wheel limits require finite positive geometry and disabled jerk limits");
++      return controller_interface::CallbackReturn::ERROR;
++    }
++  }
+   if (!reset())
+   {
+     return controller_interface::CallbackReturn::ERROR;
+--- a/src/diff_drive_controller_parameter.yaml
++++ b/src/diff_drive_controller_parameter.yaml
+@@ -1,4 +1,11 @@
+ diff_drive_controller:
++  coupled_wheel_velocity_limit:
++    type: double
++    default_value: 0.0
++    read_only: true
++    description: "Optional symmetric wheel speed cap in rad/s. Zero preserves upstream behavior. Requires jerk limits disabled."
++    validation:
++      gt_eq<>: [0.0]
+   left_wheel_names: {
+     type: string_array,
+     default_value: [],
+--- /dev/null
++++ b/LOCAL_PATCH.md
+@@ -0,0 +1,7 @@
++# Local coupled-wheel correction
++Exact upstream ros2_controllers 4.40.1 with attribution retained. Optional
++coupled_wheel_velocity_limit defaults to zero (legacy behavior). With a positive
++cap and jerk disabled, project the requested endpoint after axis speed bounds,
++use existing native axis rate allowances, then share their minimum progress.
++Store and publish that emitted result before wheel conversion. Invalid state
++emits zero. Wheel cap is configuration-only. No lease/watchdog/clock change.

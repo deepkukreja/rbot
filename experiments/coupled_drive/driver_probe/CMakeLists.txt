@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.16)
+project(coupled_driver_probe)
+find_package(ament_cmake REQUIRED)
+find_package(diff_drive_controller REQUIRED)
+add_executable(driver_probe driver_probe.cpp)
+target_compile_features(driver_probe PRIVATE cxx_std_17)
+target_link_libraries(driver_probe diff_drive_controller::diff_drive_controller)

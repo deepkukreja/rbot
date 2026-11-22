@@ -1,0 +1,33 @@
+{
+  "diff_drive_controller": {
+    "archive": "ros2_controllers_4.40.1.tar.gz",
+    "prefix": "ros2_controllers-4.40.1/diff_drive_controller",
+    "url": "https://codeload.github.com/ros-controls/ros2_controllers/tar.gz/refs/tags/4.40.1",
+    "sha256": "f3e31f3f7922000e5f17b081667545aaf79987d3aa5931544250409b4ac57957",
+    "patch": "diff_drive_controller.patch",
+    "patched_sha256": {
+      "CMakeLists.txt": "80707833733c7b58a305e614cc827365cfe8f46a61ee4d96b0d5bdfd8efb3b25",
+      "package.xml": "6bd3472e95e0cbbf2be67f2eadc0232ccf87be478d2dcd382768ec3db15aff7e",
+      "src/diff_drive_controller.cpp": "ca38043c71b95338ee523ed035613a43adcb1d683889196c6ceca02a34bf774e",
+      "src/diff_drive_controller_parameter.yaml": "1204605c063b2a7bef80d7c21cb56990c1e719f3cf97b4d1d7e316ec344fafaa",
+      "LOCAL_PATCH.md": "f570df79b655c38379d60673773c03ed0882f0a9a9de0b24ed3a91949e98bfc1"
+    }
+  },
+  "nav2_mppi_controller": {
+    "archive": "navigation2_1.3.12.tar.gz",
+    "prefix": "navigation2-1.3.12/nav2_mppi_controller",
+    "url": "https://codeload.github.com/ros-navigation/navigation2/tar.gz/refs/tags/1.3.12",
+    "sha256": "bcdf575c86250d63007595c992b9c5785c3ec907e897b79abfb4fc7eacbd1129",
+    "patch": "nav2_mppi_controller.patch",
+    "patched_sha256": {
+      "CMakeLists.txt": "021587aa4298db15da75e9897f7380f77c694e25356a81a22012e18904edf437",
+      "package.xml": "2dc151bb2bf660a34c5c46398a710fdfce03325d0e26379ce757b23baf727364",
+      "src/optimizer.cpp": "8d5c73387fe31a670c525259dc4f50fec75f6653a1baa8d7f9eadffdd60e25dd",
+      "include/nav2_mppi_controller/motion_models.hpp": "2b3ed5c962cf05ae662d1812880ca9de6ff66bf1dca11bedf877154b285370b1",
+      "include/nav2_mppi_controller/optimizer.hpp": "6a13614b2a612fb6d2fdb820ee8ca514ce77203e670aafc08cfc6e31ca89a955",
+      "test/command_bounds_probe.cpp": "9e553416c0af2a832f5339bb81c87cc77e26af852d76306280491ad57cf226af",
+      "LOCAL_PATCH.md": "2e5fc4490a6232f0e7def276206bbbba210fc59287cf559abab42be40006067b",
+      "COUPLED_PATCH.md": "7ae1fd7b5fabebad8e6d8c58b24563baf81f6da03a463b514f9fb50d75215cdf"
+    }
+  }
+}
