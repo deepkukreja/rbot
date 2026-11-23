@@ -1,0 +1,568 @@
+{
+  "scope": "Bounded Gazebo transition and command expiry with the optional coupled profile",
+  "limits_s": {
+    "supervisor_zero": 0.85,
+    "wheel_standstill": 1.5
+  },
+  "trials": [
+    {
+      "trial": "baseline_98",
+      "cpu_load_workers": 0,
+      "cpus": [
+        8,
+        10,
+        12,
+        14
+      ],
+      "all_passed": false,
+      "error": "Scenario condition did not complete within its bound",
+      "checks": {},
+      "owned_cleanup_clean": true,
+      "plan_sha256": null,
+      "commands_sent": 0,
+      "zero_s": null,
+      "wheel_standstill_s": null,
+      "startup_failure": "Drive controller activation timed out before motion"
+    },
+    {
+      "trial": "loaded_99",
+      "cpu_load_workers": 2,
+      "cpus": [
+        8,
+        10,
+        12,
+        14
+      ],
+      "all_passed": false,
+      "error": "Fixed command-loss experiment failed its declared checks",
+      "checks": {
+        "exclusive_supervisor_drive_output": true,
+        "explicit_reset_preserves_stop": true,
+        "scan_occlusion_connected_to_global_costmap": true,
+        "fixed_input_complete": true,
+        "fixed_input_health_admitted": true,
+        "command_timeout_dropped_owner": true,
+        "zero_output_within_declared_deadline": true,
+        "wheel_standstill_within_declared_deadline": false,
+        "no_nav2_goal_or_forwarding": true,
+        "no_command_reacquisition": true
+      },
+      "owned_cleanup_clean": true,
+      "plan_sha256": "5490bce909f441a8de9dcda355cb6283c9264f8fbad643066341e542b67d5523",
+      "commands_sent": 121,
+      "zero_s": 0.32200703299895395,
+      "wheel_standstill_s": 1.5931956929998705,
+      "peak_limited_wheel_rad_s": 4.999999999999991,
+      "peak_measured_joint_rad_s": 4.99999999971574,
+      "leased_packets": 121,
+      "raw_packets": 0,
+      "wheel_command_bound_passed": true,
+      "rate_bound_passed": true,
+      "pre_stop_median": {
+        "x": 0.31249999999999944,
+        "z": 0.0
+      },
+      "bag_counts": {
+        "/global_costmap/costmap_raw": 6,
+        "/global_costmap/costmap": 5,
+        "/nav2_adapter/occlusion_trace": 465,
+        "/amcl_pose": 11,
+        "/clock": 6197,
+        "/gazebo/ground_truth/odom": 309,
+        "/nav2_adapter/cmd_vel_input": 0,
+        "/motion_supervisor/status": 540,
+        "/scan": 93,
+        "/nav2_adapter/status": 377,
+        "/scan_occlusion/points": 92,
+        "/tf": 390,
+        "/diff_drive_controller/odom": 290,
+        "/diff_drive_controller/cmd_vel": 541,
+        "/tf_static": 1,
+        "/joint_states": 585,
+        "/diff_drive_controller/cmd_vel_out": 584
+      },
+      "wall_s_after_supervisor_zero": 1.2711886600009166,
+      "wheel_progress_after_zero": {
+        "sim_s": 0.40199999999999925,
+        "wall_s": 1.285270163003588,
+        "sim_over_wall": 0.31277470805091506,
+        "start_alignment_s": 0.014081503002671525,
+        "end_alignment_s": 0.0
+      },
+      "joint_progress_after_zero": {
+        "sim_s": 0.40199999999999925,
+        "wall_s": 1.2860243899922352,
+        "sim_over_wall": 0.31259127208499243,
+        "start_alignment_s": 0.015025415996205993,
+        "end_alignment_s": 0.000189686004887335
+      },
+      "gazebo_truth_progress_after_zero": {
+        "sim_s": 0.3999999999999986,
+        "wall_s": 1.3018314780056244,
+        "sim_over_wall": 0.30725943162227826,
+        "start_alignment_s": 0.01294474900350906,
+        "end_alignment_s": 0.017698069001198746
+      },
+      "acquisition_zero_to_limited_stop_s": 0.32099999999999973,
+      "limited_zero_s": 1.2992888000007952,
+      "raw_joint_body_threshold_s": 1.3288356729899533,
+      "raw_individual_joint_threshold_s": 1.3288356729899533,
+      "gazebo_truth_body_threshold_s": 1.311722029990051,
+      "limited_receipt_intervals": {
+        "median_ms": 30.268230999354273,
+        "p95_ms": 52.967243394232355,
+        "max_ms": 56.33299199689645
+      },
+      "limited_stamp_intervals": {
+        "median_ms": 9.999999999999787,
+        "p95_ms": 15.800000000000127,
+        "max_ms": 25.9999999999998
+      },
+      "cpu": {
+        "gazebo_launch_pid": {
+          "mean_cpu_cores": 0.7229271431946361,
+          "main_thread_run_queue_wait_s": 6.027269691,
+          "sample_span_s": 9.364705784988473
+        },
+        "worker_0": {
+          "mean_cpu_cores": 0.3374371894379691,
+          "main_thread_run_queue_wait_s": 6.582759824,
+          "sample_span_s": 9.364705784988473
+        },
+        "worker_1": {
+          "mean_cpu_cores": 0.35345477754420174,
+          "main_thread_run_queue_wait_s": 6.433396247,
+          "sample_span_s": 9.364705784988473
+        }
+      },
+      "max_command_lateness_ms": 10.000000000000675,
+      "minimum_rate_for_observed_brake_window": 0.3412584041341244
+    },
+    {
+      "trial": "postbaseline_100",
+      "cpu_load_workers": 0,
+      "cpus": [
+        8,
+        10,
+        12,
+        14
+      ],
+      "all_passed": false,
+      "error": "Fixed command-loss experiment failed its declared checks",
+      "checks": {
+        "exclusive_supervisor_drive_output": true,
+        "explicit_reset_preserves_stop": true,
+        "scan_occlusion_connected_to_global_costmap": true,
+        "fixed_input_complete": true,
+        "fixed_input_health_admitted": true,
+        "command_timeout_dropped_owner": true,
+        "zero_output_within_declared_deadline": true,
+        "wheel_standstill_within_declared_deadline": false,
+        "no_nav2_goal_or_forwarding": true,
+        "no_command_reacquisition": true
+      },
+      "owned_cleanup_clean": true,
+      "plan_sha256": "5490bce909f441a8de9dcda355cb6283c9264f8fbad643066341e542b67d5523",
+      "commands_sent": 121,
+      "zero_s": 0.3264055659965379,
+      "wheel_standstill_s": 1.5475540699990233,
+      "peak_limited_wheel_rad_s": 4.999999999999991,
+      "peak_measured_joint_rad_s": 4.999999999685813,
+      "leased_packets": 121,
+      "raw_packets": 0,
+      "wheel_command_bound_passed": true,
+      "rate_bound_passed": true,
+      "pre_stop_median": {
+        "x": 0.31249999999999944,
+        "z": 0.0
+      },
+      "bag_counts": {
+        "/scan": 85,
+        "/motion_supervisor/status": 503,
+        "/joint_states": 559,
+        "/nav2_adapter/occlusion_trace": 451,
+        "/nav2_adapter/status": 375,
+        "/scan_occlusion/points": 85,
+        "/nav2_adapter/cmd_vel_input": 0,
+        "/amcl_pose": 11,
+        "/clock": 5633,
+        "/diff_drive_controller/odom": 279,
+        "/tf": 356,
+        "/tf_static": 1,
+        "/diff_drive_controller/cmd_vel": 508,
+        "/global_costmap/costmap_raw": 6,
+        "/diff_drive_controller/cmd_vel_out": 561,
+        "/gazebo/ground_truth/odom": 280,
+        "/global_costmap/costmap": 5
+      },
+      "wall_s_after_supervisor_zero": 1.2211485040024854,
+      "wheel_progress_after_zero": {
+        "sim_s": 0.38099999999999845,
+        "wall_s": 1.2062382489966694,
+        "sim_over_wall": 0.3158579992940105,
+        "start_alignment_s": 0.014910255005815998,
+        "end_alignment_s": 0.0
+      },
+      "joint_progress_after_zero": {
+        "sim_s": 0.38099999999999845,
+        "wall_s": 1.203836231987225,
+        "sim_over_wall": 0.3164882314358201,
+        "start_alignment_s": 0.0146308920084266,
+        "end_alignment_s": 0.0026813800068339333
+      },
+      "gazebo_truth_progress_after_zero": {
+        "sim_s": 0.3800000000000008,
+        "wall_s": 1.2028702819952741,
+        "sim_over_wall": 0.31591103852833713,
+        "start_alignment_s": 0.0177660290064523,
+        "end_alignment_s": 0.0005121930007589981
+      },
+      "acquisition_zero_to_limited_stop_s": 0.3099999999999987,
+      "limited_zero_s": 1.2960054129944183,
+      "raw_joint_body_threshold_s": 1.2961725829954958,
+      "raw_individual_joint_threshold_s": 1.3453809950005962,
+      "gazebo_truth_body_threshold_s": 1.345729698005016,
+      "limited_receipt_intervals": {
+        "median_ms": 32.39662049600156,
+        "p95_ms": 44.56548840753385,
+        "max_ms": 54.48971799341962
+      },
+      "limited_stamp_intervals": {
+        "median_ms": 9.999999999999787,
+        "p95_ms": 12.9999999999999,
+        "max_ms": 13.999999999999346
+      },
+      "cpu": {
+        "gazebo_launch_pid": {
+          "mean_cpu_cores": 0.8222941301036942,
+          "main_thread_run_queue_wait_s": 5.27486018,
+          "sample_span_s": 9.278918237003381
+        }
+      },
+      "max_command_lateness_ms": 8.000000000000895,
+      "minimum_rate_for_observed_brake_window": 0.3246436664668729
+    },
+    {
+      "trial": "wider_baseline_101",
+      "cpu_load_workers": 0,
+      "cpus": [
+        4,
+        6,
+        8,
+        10,
+        12,
+        14
+      ],
+      "all_passed": true,
+      "error": null,
+      "checks": {
+        "exclusive_supervisor_drive_output": true,
+        "explicit_reset_preserves_stop": true,
+        "scan_occlusion_connected_to_global_costmap": true,
+        "fixed_input_complete": true,
+        "fixed_input_health_admitted": true,
+        "command_timeout_dropped_owner": true,
+        "zero_output_within_declared_deadline": true,
+        "wheel_standstill_within_declared_deadline": true,
+        "no_nav2_goal_or_forwarding": true,
+        "no_command_reacquisition": true
+      },
+      "owned_cleanup_clean": true,
+      "plan_sha256": "5490bce909f441a8de9dcda355cb6283c9264f8fbad643066341e542b67d5523",
+      "commands_sent": 121,
+      "zero_s": 0.3269218350033043,
+      "wheel_standstill_s": 1.192011929990258,
+      "peak_limited_wheel_rad_s": 4.999999999999991,
+      "peak_measured_joint_rad_s": 4.999999999693315,
+      "leased_packets": 121,
+      "raw_packets": 0,
+      "wheel_command_bound_passed": true,
+      "rate_bound_passed": true,
+      "pre_stop_median": {
+        "x": 0.31249999999999944,
+        "z": 0.0
+      },
+      "bag_counts": {
+        "/joint_states": 601,
+        "/diff_drive_controller/cmd_vel_out": 602,
+        "/amcl_pose": 11,
+        "/clock": 6435,
+        "/diff_drive_controller/odom": 301,
+        "/tf": 405,
+        "/global_costmap/costmap": 5,
+        "/nav2_adapter/occlusion_trace": 396,
+        "/gazebo/ground_truth/odom": 318,
+        "/global_costmap/costmap_raw": 6,
+        "/nav2_adapter/cmd_vel_input": 0,
+        "/nav2_adapter/status": 300,
+        "/scan_occlusion/points": 97,
+        "/diff_drive_controller/cmd_vel": 431,
+        "/tf_static": 1,
+        "/scan": 96,
+        "/motion_supervisor/status": 431
+      },
+      "wall_s_after_supervisor_zero": 0.8650900949869538,
+      "wheel_progress_after_zero": {
+        "sim_s": 0.40199999999999925,
+        "wall_s": 0.869023480991018,
+        "sim_over_wall": 0.4625881909906117,
+        "start_alignment_s": 0.003933386004064232,
+        "end_alignment_s": 0.0
+      },
+      "joint_progress_after_zero": {
+        "sim_s": 0.40199999999999925,
+        "wall_s": 0.8703666179935681,
+        "sim_over_wall": 0.46187433167728636,
+        "start_alignment_s": 0.005658021007548086,
+        "end_alignment_s": 0.0003814980009337887
+      },
+      "gazebo_truth_progress_after_zero": {
+        "sim_s": 0.40000000000000036,
+        "wall_s": 0.8693778979941271,
+        "sim_over_wall": 0.46009911331182984,
+        "start_alignment_s": 0.00036389200249686837,
+        "end_alignment_s": 0.003923911004676484
+      },
+      "acquisition_zero_to_limited_stop_s": 0.3200000000000003,
+      "limited_zero_s": 1.0278947070037248,
+      "raw_joint_body_threshold_s": 1.0280922419915441,
+      "raw_individual_joint_threshold_s": 1.0421081209933618,
+      "gazebo_truth_body_threshold_s": 1.0306957739958307,
+      "limited_receipt_intervals": {
+        "median_ms": 20.677300497482065,
+        "p95_ms": 30.242211505537853,
+        "max_ms": 33.85882500151638
+      },
+      "limited_stamp_intervals": {
+        "median_ms": 9.999999999999787,
+        "p95_ms": 12.9999999999999,
+        "max_ms": 15.000000000000568
+      },
+      "cpu": {
+        "gazebo_launch_pid": {
+          "mean_cpu_cores": 1.1984186134973196,
+          "main_thread_run_queue_wait_s": 2.13143055,
+          "sample_span_s": 5.83268644301279
+        }
+      },
+      "max_command_lateness_ms": 6.000000000000227,
+      "minimum_rate_for_observed_brake_window": 0.3426881617911042
+    }
+  ],
+  "historical_trials": [
+    {
+      "trial": "coupled_transition_63",
+      "cpu_load_workers": 0,
+      "cpus": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "all_passed": true,
+      "error": null,
+      "checks": {
+        "exclusive_supervisor_drive_output": true,
+        "explicit_reset_preserves_stop": true,
+        "scan_occlusion_connected_to_global_costmap": true,
+        "fixed_input_complete": true,
+        "fixed_input_health_admitted": true,
+        "command_timeout_dropped_owner": true,
+        "zero_output_within_declared_deadline": true,
+        "wheel_standstill_within_declared_deadline": true,
+        "no_nav2_goal_or_forwarding": true,
+        "no_command_reacquisition": true
+      },
+      "owned_cleanup_clean": true,
+      "plan_sha256": "5490bce909f441a8de9dcda355cb6283c9264f8fbad643066341e542b67d5523",
+      "commands_sent": 121,
+      "zero_s": 0.3279202470002929,
+      "wheel_standstill_s": 1.422415433000424,
+      "peak_limited_wheel_rad_s": 4.999999999999991,
+      "peak_measured_joint_rad_s": 4.999999999692083,
+      "leased_packets": 121,
+      "raw_packets": 0,
+      "wheel_command_bound_passed": true,
+      "rate_bound_passed": true,
+      "pre_stop_median": {
+        "x": 0.31249999999999944,
+        "z": 0.0
+      },
+      "bag_counts": {
+        "/global_costmap/costmap_raw": 6,
+        "/global_costmap/costmap": 5,
+        "/nav2_adapter/cmd_vel_input": 0,
+        "/amcl_pose": 11,
+        "/clock": 6480,
+        "/tf_static": 1,
+        "/diff_drive_controller/cmd_vel": 514,
+        "/gazebo/ground_truth/odom": 318,
+        "/nav2_adapter/occlusion_trace": 447,
+        "/motion_supervisor/status": 511,
+        "/scan": 96,
+        "/diff_drive_controller/cmd_vel_out": 620,
+        "/tf": 388,
+        "/diff_drive_controller/odom": 310,
+        "/joint_states": 610,
+        "/scan_occlusion/points": 93,
+        "/nav2_adapter/status": 350
+      },
+      "wall_s_after_supervisor_zero": 1.094495186000131,
+      "wheel_progress_after_zero": {
+        "sim_s": 0.40000000000000036,
+        "wall_s": 1.071926306001842,
+        "sim_over_wall": 0.37315998101768105,
+        "start_alignment_s": 0.02256887999828905,
+        "end_alignment_s": 0.0
+      },
+      "joint_progress_after_zero": {
+        "sim_s": 0.40000000000000036,
+        "wall_s": 1.0761330210007145,
+        "sim_over_wall": 0.37170126015465405,
+        "start_alignment_s": 0.017304166998656,
+        "end_alignment_s": 0.0010579980007605627
+      },
+      "gazebo_truth_progress_after_zero": {
+        "sim_s": 0.40000000000000036,
+        "wall_s": 1.0681339820002904,
+        "sim_over_wall": 0.3744848555898595,
+        "start_alignment_s": 0.03085881999868434,
+        "end_alignment_s": 0.004497615998843685
+      },
+      "acquisition_zero_to_limited_stop_s": 0.31099999999999994,
+      "limited_zero_s": 1.1688901859997713,
+      "raw_joint_body_threshold_s": 1.1637697020014457,
+      "raw_individual_joint_threshold_s": 1.191303837000305,
+      "gazebo_truth_body_threshold_s": 1.1954277180011559,
+      "limited_receipt_intervals": {
+        "median_ms": 27.08061300290865,
+        "p95_ms": 39.74441249920346,
+        "max_ms": 54.799833000288345
+      },
+      "limited_stamp_intervals": {
+        "median_ms": 9.999999999999787,
+        "p95_ms": 12.9999999999999,
+        "max_ms": 15.000000000000568
+      },
+      "cpu": {
+        "gazebo_launch_pid": {
+          "mean_cpu_cores": 0.7972467642707629,
+          "main_thread_run_queue_wait_s": 4.925214409,
+          "sample_span_s": 9.143969379001646
+        }
+      },
+      "max_command_lateness_ms": 8.000000000000007,
+      "minimum_rate_for_observed_brake_window": 0.34127370511800004
+    },
+    {
+      "trial": "rebuilt_transition_94",
+      "cpu_load_workers": 0,
+      "cpus": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "all_passed": false,
+      "error": "Fixed command-loss experiment failed its declared checks",
+      "checks": {
+        "exclusive_supervisor_drive_output": true,
+        "explicit_reset_preserves_stop": true,
+        "scan_occlusion_connected_to_global_costmap": true,
+        "fixed_input_complete": true,
+        "fixed_input_health_admitted": true,
+        "command_timeout_dropped_owner": true,
+        "zero_output_within_declared_deadline": true,
+        "wheel_standstill_within_declared_deadline": false,
+        "no_nav2_goal_or_forwarding": true,
+        "no_command_reacquisition": true
+      },
+      "owned_cleanup_clean": true,
+      "plan_sha256": "5490bce909f441a8de9dcda355cb6283c9264f8fbad643066341e542b67d5523",
+      "commands_sent": 121,
+      "zero_s": 0.3191305049986113,
+      "wheel_standstill_s": 1.6225903269951232,
+      "peak_limited_wheel_rad_s": 4.999999999999991,
+      "peak_measured_joint_rad_s": 4.999999999685785,
+      "leased_packets": 121,
+      "raw_packets": 0,
+      "wheel_command_bound_passed": true,
+      "rate_bound_passed": true,
+      "pre_stop_median": {
+        "x": 0.31249999999999944,
+        "z": 0.0
+      },
+      "bag_counts": {
+        "/global_costmap/costmap_raw": 6,
+        "/global_costmap/costmap": 5,
+        "/nav2_adapter/cmd_vel_input": 0,
+        "/clock": 6224,
+        "/gazebo/ground_truth/odom": 310,
+        "/nav2_adapter/occlusion_trace": 431,
+        "/scan": 94,
+        "/motion_supervisor/status": 532,
+        "/diff_drive_controller/cmd_vel": 532,
+        "/tf_static": 1,
+        "/amcl_pose": 11,
+        "/nav2_adapter/status": 346,
+        "/scan_occlusion/points": 87,
+        "/tf": 390,
+        "/diff_drive_controller/odom": 284,
+        "/diff_drive_controller/cmd_vel_out": 568,
+        "/joint_states": 567
+      },
+      "wall_s_after_supervisor_zero": 1.303459821996512,
+      "wheel_progress_after_zero": {
+        "sim_s": 0.41000000000000014,
+        "wall_s": 1.3036582979984814,
+        "sim_over_wall": 0.3144995898307685,
+        "start_alignment_s": 0.00019847600196953863,
+        "end_alignment_s": 0.0
+      },
+      "joint_progress_after_zero": {
+        "sim_s": 0.41000000000000014,
+        "wall_s": 1.3074027430047863,
+        "sim_over_wall": 0.3135988525293305,
+        "start_alignment_s": 0.004534061001322698,
+        "end_alignment_s": 0.000591139993048273
+      },
+      "gazebo_truth_progress_after_zero": {
+        "sim_s": 0.40000000000000036,
+        "wall_s": 1.2807439049938694,
+        "sim_over_wall": 0.31231848806019896,
+        "start_alignment_s": 0.02866341500339331,
+        "end_alignment_s": 0.005947498000750784
+      },
+      "acquisition_zero_to_limited_stop_s": 0.31700000000000017,
+      "limited_zero_s": 1.349809531995561,
+      "raw_joint_body_threshold_s": 1.3500080779995187,
+      "raw_individual_joint_threshold_s": 1.3808633789958549,
+      "gazebo_truth_body_threshold_s": 1.3818036329976167,
+      "limited_receipt_intervals": {
+        "median_ms": 30.969982999522472,
+        "p95_ms": 49.289589903492015,
+        "max_ms": 55.77425700175809
+      },
+      "limited_stamp_intervals": {
+        "median_ms": 9.999999999999787,
+        "p95_ms": 13.550000000000395,
+        "max_ms": 17.000000000001236
+      },
+      "cpu": {
+        "gazebo_launch_pid": {
+          "mean_cpu_cores": 0.7375513521140233,
+          "main_thread_run_queue_wait_s": 5.096917986,
+          "sample_span_s": 9.097671614006686
+        }
+      },
+      "max_command_lateness_ms": 7.000000000000561,
+      "minimum_rate_for_observed_brake_window": 0.347201787949919
+    }
+  ],
+  "provenance": {
+    "guarded_commit": "38df273f1a2de45a4517551f9d4809ee2a644e98",
+    "fixture_sha256": "01f258392ac73eb30382bac84564f5aad936a2332c6f3a9bb5260489f7269dbe",
+    "diff_drive_library_sha256": "c220d0571e9ac63beddcd826ec4557d5471c2bd65c306a213df6cb9f47cc5caf",
+    "mppi_library_sha256": "857bf12dd613f05b688dd2debfaca16c43b670af5fbbf5c445be1235dff788e5"
+  }
+}
