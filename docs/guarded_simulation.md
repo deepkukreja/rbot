@@ -74,6 +74,41 @@ The first clean-build launch exposed a missing `rlai_meshes` runtime
 dependency before the robot spawned. Both mesh consumers now declare it.
 The passing run used the rebuilt workspace and the original motion limits.
 
+## Drive startup readiness
+
+Guarded simulation waits for controller-manager discovery and at least
+50 ms of fresh forward `/clock` progress before requesting one grouped
+activation of the joint-state broadcaster and differential-drive
+controller. The clock gate uses a 20 s wall-clock budget. The controller
+switch retains its 5 s deadline. A gate failure, spawner failure, or
+35 s overall control-startup timeout fails the enclosing launch with
+`GUARDED_CONTROL_STARTUP_FAILED`. Normal launch-process shutdown grace
+follows the failure. Actuator supervision and stopping limits stay in
+place.
+
+The historical transition attempt timed out at a drive switch before
+the first observed Gazebo ground-truth message. Those logs establish
+the order of the events. A ROS clock trace was unavailable for that
+attempt.
+
+Five isolated startup checks used ROS 2 Jazzy, headless Gazebo Harmonic
+where applicable, and the coupled drive profile. They requested no
+leases or goals and observed no nonzero drive commands.
+
+| Check | Observation |
+| --- | --- |
+| Original normal launch | Both controllers active with joint state and odometry at 12.82 wall s |
+| Original invalid drive plugin | Joint-state broadcaster active. Launch still running at the end of 42 s observation |
+| Guarded normal launch | One successful grouped switch after clock readiness. Both controllers active with joint state and odometry at 11.02 wall s |
+| Guarded invalid drive plugin | Launch exited with status 1 and a controller startup failure |
+| Guarded frozen clock with discoverable manager service | Launch exited with status 1. Controller spawner never started |
+
+The healthy guarded launch advanced at about 0.50
+simulated seconds per wall second in the two-second observation window
+after readiness. This is a startup measurement from one run. See the
+[stopping timing report](../experiments/coupled_drive/STOPPING_TIMING.md)
+for the separate motion and command-expiry measurements.
+
 ## Map
 
 [`nav2_map.yaml`](../maps/guarded_small_warehouse/nav2_map.yaml) and its

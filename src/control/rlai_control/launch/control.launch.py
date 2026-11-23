@@ -26,9 +26,12 @@ Usage:
   ros2 launch rlai_control control.launch.py use_sim_time:=false  # real robot
 """
 
+import sys
+
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, TimerAction
-from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
+from launch.actions import DeclareLaunchArgument, ExecuteProcess, OpaqueFunction, RegisterEventHandler, TimerAction
+from launch.event_handlers import OnProcessExit
+from launch.substitutions import AndSubstitution, LaunchConfiguration, PathJoinSubstitution
 from launch.conditions import IfCondition, UnlessCondition
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
@@ -41,6 +44,7 @@ def generate_launch_description():
     smoother_yaml = PathJoinSubstitution([pkg, "config", "velocity_smoother.yaml"])
 
     supervised = LaunchConfiguration("motion_supervision_enabled")
+    guarded_simulation = AndSubstitution(supervised, LaunchConfiguration("use_sim_time"))
 
     # Launch arguments
     declared_args = [
@@ -56,11 +60,12 @@ def generate_launch_description():
         ),
     ]
 
-    # Load before diff_drive_controller so /joint_states is available for wheel positions.
+    # Keep the existing spawner path for the other control profiles.
     joint_state_broadcaster_spawner = Node(
         package="controller_manager",
         executable="spawner",
         name="joint_state_broadcaster_spawner",
+        condition=UnlessCondition(guarded_simulation),
         arguments=[
             "joint_state_broadcaster",
             "--param-file", controllers_yaml,
@@ -72,12 +77,59 @@ def generate_launch_description():
         package="controller_manager",
         executable="spawner",
         name="diff_drive_controller_spawner",
+        condition=UnlessCondition(guarded_simulation),
         arguments=[
             "diff_drive_controller",
             "--param-file", controllers_yaml,
         ],
         output="screen",
     )
+
+    def guarded_startup(_context):
+        clock_gate = ExecuteProcess(
+            cmd=[sys.executable, PathJoinSubstitution([pkg, "launch", "wait_for_sim_clock.py"])],
+            name="guarded_control_clock_gate",
+            output="screen",
+        )
+        spawner = Node(
+            package="controller_manager",
+            executable="spawner",
+            name="guarded_controller_spawner",
+            arguments=[
+                "joint_state_broadcaster", "diff_drive_controller",
+                "--param-file", controllers_yaml,
+                "--activate-as-group", "--controller-manager-timeout", "10.0",
+                "--switch-timeout", "5.0",
+            ],
+            output="screen",
+        )
+        activated = False
+
+        def clock_exited(event, context):
+            if context.is_shutdown:
+                return
+            if event.returncode != 0:
+                raise RuntimeError("GUARDED_CONTROL_STARTUP_FAILED: clock readiness unconfirmed")
+            return [spawner]
+
+        def spawner_exited(event, context):
+            nonlocal activated
+            if context.is_shutdown:
+                return
+            if event.returncode != 0:
+                raise RuntimeError("GUARDED_CONTROL_STARTUP_FAILED: controller activation failed")
+            activated = True
+
+        def check_deadline(context):
+            if not context.is_shutdown and not activated:
+                raise RuntimeError("GUARDED_CONTROL_STARTUP_FAILED: startup deadline expired")
+
+        return [
+            RegisterEventHandler(OnProcessExit(target_action=clock_gate, on_exit=clock_exited)),
+            RegisterEventHandler(OnProcessExit(target_action=spawner, on_exit=spawner_exited)),
+            TimerAction(period=35.0, actions=[OpaqueFunction(function=check_deadline)]),
+            clock_gate,
+        ]
 
     # Smooth /cmd_vel before forwarding TwistStamped commands to diff_drive_controller.
     velocity_smoother = Node(
@@ -133,6 +185,7 @@ def generate_launch_description():
         declared_args + [
             joint_state_broadcaster_spawner,
             diff_drive_spawner,
+            OpaqueFunction(function=guarded_startup, condition=IfCondition(guarded_simulation)),
             velocity_smoother,
             motion_supervisor,
             lifecycle_manager_delayed,
