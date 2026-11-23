@@ -13,6 +13,7 @@
   <exec_depend>rlai_gazebo</exec_depend>
   <exec_depend>rlai_control</exec_depend>
   <exec_depend>rlai_camera_processing</exec_depend>
+  <exec_depend>rlai_lidar_processing</exec_depend>
   <exec_depend>rlai_localization</exec_depend>
   <exec_depend>rlai_mapping</exec_depend>
   <exec_depend>rlai_navigation</exec_depend>

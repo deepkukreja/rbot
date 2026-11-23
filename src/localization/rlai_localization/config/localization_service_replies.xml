@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Fast DDS 2.14 / rmw_fastrtps: this writer budget also bounds waiting for
+     discovery of the service client's reply reader. No topic default changes. -->
+<dds xmlns="http://www.eprosima.com/XMLSchemas/fastRTPS_Profiles">
+  <profiles>
+    <publisher profile_name="service">
+      <qos>
+        <reliability>
+          <kind>RELIABLE</kind>
+          <max_blocking_time><sec>2</sec><nanosec>0</nanosec></max_blocking_time>
+        </reliability>
+      </qos>
+    </publisher>
+  </profiles>
+</dds>

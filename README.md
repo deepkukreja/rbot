@@ -55,6 +55,12 @@ Gazebo Harmonic is the supported simulator. Isaac Sim packages are present as sc
 
 ---
 
+## Robot Buildworks guarded simulation
+
+Build and run the [guarded warehouse simulation](docs/guarded_simulation.md) to exercise supervised motion, explicit localization admission, and scan-loss behavior.
+
+---
+
 ## Mapping and Navigation Quick Path
 
 Use these commands for a mapping and autonomous navigation loop.

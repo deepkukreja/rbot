@@ -1,0 +1,92 @@
+# Optional overrides loaded after nav2_params.yaml by use_3d_obstacles:=true.
+# Keep 2D /scan for localization and its existing obstacle layer. A separate
+# voxel layer prevents 2D scan clearing from erasing obstacles below its plane.
+# Fractional-coordinate traversal clears cells crossed by actual measured rays.
+# Keep this experimental profile opt-in; unobserved/occluded volumes stay occupied.
+global_costmap:
+  global_costmap:
+    ros__parameters:
+      plugins: ["static_layer", "obstacle_layer", "lidar3d_layer", "inflation_layer"]
+      lidar3d_layer:
+        plugin: "rlai_costmap_plugins::RayVoxelLayer"
+        enabled: true
+        footprint_clearing_enabled: true
+        publish_voxel_map: false
+        origin_z: 0.0
+        # 10 cm height bins bridge sparse VLP-16 vertical rays during clearing.
+        z_resolution: 0.10
+        z_voxels: 16
+        unknown_threshold: 15
+        mark_threshold: 0
+        # Collision-height band for the raised 3D sensor (~0.51 m robot height).
+        min_obstacle_height: 0.06
+        max_obstacle_height: 0.60
+        observation_sources: cloud raw_clear
+        cloud:
+          topic: /lidar_3d/points
+          data_type: "PointCloud2"
+          marking: true
+          clearing: false
+          # The layer's marking band excludes floor returns retained by the filter.
+          min_obstacle_height: -0.05
+          max_obstacle_height: 0.80
+          obstacle_min_range: 0.45
+          obstacle_max_range: 8.0
+          raytrace_min_range: 0.0
+          raytrace_max_range: 12.0
+          observation_persistence: 0.0
+          expected_update_rate: 0.5
+        # Preserve original ray endpoints for clearing; voxel centroids are not rays.
+        raw_clear:
+          topic: /lidar_3d/points_raw
+          data_type: "PointCloud2"
+          marking: false
+          clearing: true
+          min_obstacle_height: -0.05
+          max_obstacle_height: 0.80
+          raytrace_min_range: 0.0
+          raytrace_max_range: 12.0
+          observation_persistence: 0.0
+          expected_update_rate: 0.5
+
+local_costmap:
+  local_costmap:
+    ros__parameters:
+      plugins: ["obstacle_layer", "lidar3d_layer", "inflation_layer"]
+      lidar3d_layer:
+        plugin: "rlai_costmap_plugins::RayVoxelLayer"
+        enabled: true
+        footprint_clearing_enabled: true
+        publish_voxel_map: false
+        origin_z: 0.0
+        z_resolution: 0.10
+        z_voxels: 16
+        unknown_threshold: 15
+        mark_threshold: 0
+        min_obstacle_height: 0.06
+        max_obstacle_height: 0.60
+        observation_sources: cloud raw_clear
+        cloud:
+          topic: /lidar_3d/points
+          data_type: "PointCloud2"
+          marking: true
+          clearing: false
+          min_obstacle_height: -0.05
+          max_obstacle_height: 0.80
+          obstacle_min_range: 0.45
+          obstacle_max_range: 8.0
+          raytrace_min_range: 0.0
+          raytrace_max_range: 12.0
+          observation_persistence: 0.0
+          expected_update_rate: 0.5
+        raw_clear:
+          topic: /lidar_3d/points_raw
+          data_type: "PointCloud2"
+          marking: false
+          clearing: true
+          min_obstacle_height: -0.05
+          max_obstacle_height: 0.80
+          raytrace_min_range: 0.0
+          raytrace_max_range: 12.0
+          observation_persistence: 0.0
+          expected_update_rate: 0.5

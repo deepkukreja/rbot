@@ -52,14 +52,15 @@
 
   <xacro:if value="$(arg lidar_2d_enabled)">
     <xacro:rlai_lidar_2d parent="base_link"
-                         xyz="0.20 0.0 0.18"
+                         xyz="0.20 0.0 0.29"
                          rpy="0 0 0"
                          model="$(arg lidar_2d_model)"/>
   </xacro:if>
 
   <xacro:if value="$(arg lidar_3d_enabled)">
+    <!-- Clear the front 2D housing even for the -15 degree 3D channel. -->
     <xacro:rlai_lidar_3d parent="base_link"
-                         xyz="0.0 0.0 0.30"
+                         xyz="0.0 0.0 0.40"
                          rpy="0 0 0"
                          model="$(arg lidar_3d_model)"/>
   </xacro:if>

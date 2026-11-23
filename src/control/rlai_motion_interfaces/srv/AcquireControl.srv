@@ -1,0 +1,7 @@
+string owner
+string source
+uint32 duration_ms
+---
+bool granted
+string lease_id
+string reason

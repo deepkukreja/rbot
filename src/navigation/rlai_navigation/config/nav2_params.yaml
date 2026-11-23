@@ -6,6 +6,7 @@ controller_server:
   ros__parameters:
     use_sim_time: true
     enable_stamped_cmd_vel: true    # publish TwistStamped — matches velocity_smoother input
+    odom_topic: /diff_drive_controller/odom  # velocity feedback; /odom has no publisher
 
     # Controller cycle frequency — must be ≥ costmap update frequency.
     controller_frequency: 20.0
@@ -394,9 +395,11 @@ bt_navigator:
     # Path is resolved at launch time via PathJoinSubstitution and overrides this value.
     default_nav_to_pose_bt_xml: "navigate_to_pose.xml"
 
-    # Timeout for the BT to complete one navigation goal.
+    # BT tick period and action request/cancel acknowledgement timeouts (milliseconds).
+    # These do not limit the total duration of a navigation goal.
     bt_loop_duration: 10              # ms — BT tick rate
-    default_server_timeout: 20        # seconds — per action call
+    default_server_timeout: 1000      # ms — allow controller replanning acknowledgements under simulation load
+    default_cancel_timeout: 1000      # ms — allow an active controller goal to acknowledge cancellation
     wait_for_service_timeout: 10000   # ms — wait for action servers on startup
 
     # Error code parameter names (required in Nav2 Jazzy to suppress warnings)

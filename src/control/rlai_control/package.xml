@@ -15,6 +15,7 @@
   <exec_depend>diff_drive_controller</exec_depend>
   <exec_depend>joint_state_broadcaster</exec_depend>
   <exec_depend>nav2_velocity_smoother</exec_depend>
+  <exec_depend>rlai_motion_supervisor</exec_depend>
 
   <export>
     <build_type>ament_cmake</build_type>

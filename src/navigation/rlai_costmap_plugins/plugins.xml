@@ -1,0 +1,12 @@
+<library path="rlai_voxel_layer">
+  <class name="rlai_costmap_plugins::RayVoxelLayer"
+         type="rlai_costmap_plugins::RayVoxelLayer"
+         base_class_type="nav2_costmap_2d::Layer">
+    <description>Nav2 voxel marking with fractional-coordinate measured-ray clearing.</description>
+  </class>
+  <class name="rlai_costmap_plugins::RayObstacleLayer"
+         type="rlai_costmap_plugins::RayObstacleLayer"
+         base_class_type="nav2_costmap_2d::Layer">
+    <description>Nav2 2D obstacle marking with fractional-coordinate measured-ray clearing.</description>
+  </class>
+</library>

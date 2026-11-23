@@ -69,12 +69,13 @@ amcl:
     tf_broadcast:        true
 
     # Initial pose
-    # Robot starts at (1.0, 1.0) — clearly in open floor space, away from obstacles.
-    # Gazebo spawn position must match this, or manually publish /initialpose.
+    # Map coordinates: the corrected warehouse map starts at (0, 0),
+    # corresponding to the default Gazebo world spawn (1, 1).
+    # For a different map or spawn, publish the appropriate /initialpose.
     set_initial_pose: true
     initial_pose:
-      x: 1.0
-      y: 1.0
+      x: 0.0
+      y: 0.0
       z: 0.0
       yaw: 0.0
 

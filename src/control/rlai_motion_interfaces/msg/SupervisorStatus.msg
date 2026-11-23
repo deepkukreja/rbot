@@ -1,0 +1,10 @@
+string state
+string owner
+string source
+string reason
+uint32 lease_remaining_ms
+uint64 accepted_sequence
+bool has_command
+bool health_required
+bool inhibited
+string health_reason

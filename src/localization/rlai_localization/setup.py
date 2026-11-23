@@ -11,11 +11,11 @@ setup(
     data_files=[
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
-        ('share/' + package_name, ['package.xml']),
+        ('share/' + package_name, ['package.xml', 'STARTUP.md']),
         (os.path.join('share', package_name, 'launch'),
             glob('launch/*.py')),
         (os.path.join('share', package_name, 'config'),
-            glob('config/*.yaml')),
+            glob('config/*.yaml') + glob('config/*.xml')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -25,6 +25,6 @@ setup(
     license='Apache-2.0',
     tests_require=['pytest'],
     entry_points={
-        'console_scripts': [],
+        'console_scripts': ['bounded_lifecycle = rlai_localization.bounded_lifecycle:main', 'ros_loopback_udp = rlai_localization.loopback_udp:main'],
     },
 )

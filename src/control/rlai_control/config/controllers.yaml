@@ -23,6 +23,7 @@ diff_drive_controller:
 
     # Physical dimensions — must match URDF wheel macros
     wheel_separation: 0.35    # meters  (between wheel centrelines)
+    wheel_separation_multiplier: 0.886  # temporary calibration test
     wheel_radius:     0.0625  # meters
 
     # Odometry

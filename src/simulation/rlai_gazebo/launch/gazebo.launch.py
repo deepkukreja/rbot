@@ -125,6 +125,12 @@ def generate_launch_description():
 
     # Launch arguments
     declared_args = [
+        DeclareLaunchArgument('bridge_scan_topic',default_value='scan',
+            description='ROS output topic of the Gazebo 2D scan bridge'),
+        DeclareLaunchArgument('motion_health_scan_topic',default_value='scan'),
+        DeclareLaunchArgument('motion_health_enabled',default_value='false'),
+        DeclareLaunchArgument("motion_supervision_enabled", default_value="false",
+            description="Use the local leased motion supervisor instead of the legacy smoother"),
         DeclareLaunchArgument(
             "world",
             default_value="small_warehouse",
@@ -235,6 +241,7 @@ def generate_launch_description():
     ros_gz_bridge = Node(
         package="ros_gz_bridge",
         executable="parameter_bridge",
+        remappings=[('/scan',LaunchConfiguration('bridge_scan_topic'))],
         name="ros_gz_bridge",
         output="screen",
         parameters=[{
@@ -255,7 +262,10 @@ def generate_launch_description():
                         [pkg_control, "launch", "control.launch.py"]
                     )
                 ),
-                launch_arguments={"use_sim_time": "true"}.items(),
+                launch_arguments={"use_sim_time": "true",
+                    "motion_supervision_enabled": LaunchConfiguration("motion_supervision_enabled"),
+                    "motion_health_enabled": LaunchConfiguration("motion_health_enabled"),
+                    "motion_health_scan_topic": LaunchConfiguration("motion_health_scan_topic")}.items(),
             )
         ],
     )

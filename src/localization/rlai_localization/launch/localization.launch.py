@@ -34,9 +34,10 @@ Usage:
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.conditions import IfCondition
-from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
+from launch.substitutions import EnvironmentVariable, LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
+from rlai_localization.lifecycle_launch import bounded_startup_actions
 
 
 def generate_launch_description():
@@ -45,9 +46,19 @@ def generate_launch_description():
     imu_filter_yaml = PathJoinSubstitution([pkg, 'config', 'imu_filter.yaml'])
     ekf_yaml = PathJoinSubstitution([pkg, 'config', 'ekf.yaml'])
     amcl_yaml = PathJoinSubstitution([pkg, 'config', 'amcl.yaml'])
+    service_profile = PathJoinSubstitution([pkg, 'config', 'localization_service_replies.xml'])
 
     # Launch arguments
     declared_args = [
+        DeclareLaunchArgument(
+            'localization_startup_timeout', default_value='25.0',
+            description='Wall-clock startup deadline in seconds, finite range 5 to 120'),
+        DeclareLaunchArgument(
+            'localization_fastdds_profile',
+            default_value=EnvironmentVariable(
+                'FASTRTPS_DEFAULT_PROFILES_FILE', default_value=service_profile),
+            description='Fast DDS XML for map_server and AMCL; preserve or merge a custom service profile',
+        ),
         DeclareLaunchArgument(
             'use_sim_time',
             default_value='true',
@@ -105,6 +116,9 @@ def generate_launch_description():
     map_server = Node(
         package='nav2_map_server',
         executable='map_server',
+        remappings=[('map_server/change_state', '_localization_control/map_server/change_state'),
+                    ('map_server/get_state', '_localization_control/map_server/get_state')],
+        additional_env={'FASTRTPS_DEFAULT_PROFILES_FILE': LaunchConfiguration('localization_fastdds_profile')},
         name='map_server',
         output='screen',
         parameters=[{
@@ -118,6 +132,9 @@ def generate_launch_description():
     amcl_node = Node(
         package='nav2_amcl',
         executable='amcl',
+        remappings=[('amcl/change_state', '_localization_control/amcl/change_state'),
+                    ('amcl/get_state', '_localization_control/amcl/get_state')],
+        additional_env={'FASTRTPS_DEFAULT_PROFILES_FILE': LaunchConfiguration('localization_fastdds_profile')},
         name='amcl',
         output='screen',
         parameters=[
@@ -143,8 +160,21 @@ def generate_launch_description():
         condition=IfCondition(LaunchConfiguration('use_amcl')),
     )
 
+    # Lifecycle transport is bounded; node names and stock bonds stay intact.
+    lifecycle_guard = Node(
+        package='rlai_localization', executable='bounded_lifecycle',
+        name='localization_startup_guard', output='screen',
+        additional_env={'FASTRTPS_DEFAULT_PROFILES_FILE': LaunchConfiguration('localization_fastdds_profile')},
+        sigterm_timeout='3', sigkill_timeout='2',
+        condition=IfCondition(LaunchConfiguration('use_amcl')),
+    )
+    startup_actions = bounded_startup_actions(
+        lifecycle_guard, LaunchConfiguration('localization_startup_timeout'),
+        condition=IfCondition(LaunchConfiguration('use_amcl')))
+
     return LaunchDescription(
-        declared_args + [
+        declared_args + startup_actions + [
+            lifecycle_guard,
             imu_filter_node,
             ekf_node,
             map_server,

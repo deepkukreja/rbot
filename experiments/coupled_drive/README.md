@@ -8,13 +8,13 @@ The pinned reconstruction reproduced the wheel and acceleration bounds and retai
 
 ## Reproduce the overlay
 
-Use ROS 2 Jazzy, Gazebo Harmonic and a built **guarded rbot development workspace** containing `rlai_motion_supervisor` and `supervised_navigation.launch.py`. A stock upstream rbot checkout does not include that guarded runtime. Install the upstream packages' build dependencies in the ROS environment. This directory carries pinned source inputs and a profile builder. It is excluded from ordinary colcon discovery.
+Build the [guarded warehouse workspace](../../docs/guarded_simulation.md) with ROS 2 Jazzy and Gazebo Harmonic. It provides `rlai_motion_supervisor` and `supervised_navigation.launch.py`. This directory carries the overlay's pinned source inputs and profile builder. It is excluded from ordinary colcon discovery.
 
 From the repository root in Bash, source ROS and the guarded workspace, then run:
 
 ```bash
 source /opt/ros/jazzy/setup.bash
-source ~/rbot/install/setup.bash
+source install/setup.bash
 profile="$(pwd -P)/experiments/coupled_drive"
 runtime="$HOME/rbot-coupled-runtime"
 mkdir -p "$runtime"
@@ -28,15 +28,19 @@ CMAKE_BUILD_PARALLEL_LEVEL=1 MAKEFLAGS=-j1 colcon --log-base "$runtime/log" buil
 
 Use an empty runtime directory for a new configuration. You can prefill the archive cache with the files named in `sources.json` for offline preparation. Both pinned upstream archives and every modified source file are SHA256-checked. The builder retains upstream licenses and applies the checked-in patches to the exact releases.
 
-In each launch shell source the normal guarded workspace first. Use a free, nonzero ROS domain and a unique Gazebo partition for this simulation. Use the same values and activation script in both the bringup and navigation shells:
+From the repository root in each launch shell, repeat setup and activation with the same runtime directory, free ROS domain, and unique Gazebo partition.
 
 ```bash
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
 export ROS_DOMAIN_ID=70 GZ_PARTITION=rbot_coupled_70
-source "$profile/activate.bash" "$runtime"
-# Bringup shell, with the path to your validated map:
+source experiments/coupled_drive/activate.bash "$HOME/rbot-coupled-runtime"
+# Bringup shell, from the repository root:
 ros2 run rlai_localization ros_loopback_udp -- ros2 launch rlai_bringup simulation.launch.py \
   headless:=true teleop_enabled:=false motion_supervision_enabled:=true \
-  motion_health_enabled:=true use_amcl:=true map_yaml_file:=/path/to/validated-map.yaml
+  motion_health_enabled:=true use_amcl:=true \
+  camera_processing_enabled:=false depth_camera_enabled:=false \
+  map_yaml_file:="$(pwd -P)/maps/guarded_small_warehouse/nav2_map.yaml"
 # Separate navigation shell, after sourcing the same profile:
 ros2 run rlai_localization ros_loopback_udp -- ros2 launch rlai_navigation supervised_navigation.launch.py
 ```

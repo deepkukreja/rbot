@@ -13,11 +13,16 @@
   <exec_depend>nav2_mppi_controller</exec_depend>
   <exec_depend>nav2_smac_planner</exec_depend>
   <exec_depend>nav2_velocity_smoother</exec_depend>
+  <exec_depend>rlai_costmap_plugins</exec_depend>
+  <exec_depend>rlai_motion_supervisor</exec_depend>
   <!-- nav_client.py runtime dependencies -->
   <exec_depend>rclpy</exec_depend>
   <exec_depend>nav2_msgs</exec_depend>
   <exec_depend>action_msgs</exec_depend>
   <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>sensor_msgs_py</exec_depend>
+  <exec_depend>rcl_interfaces</exec_depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>

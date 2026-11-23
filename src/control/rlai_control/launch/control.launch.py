@@ -15,6 +15,9 @@ Prerequisites (provided by Gazebo + Phase 3):
 
 Topic routing after this launch:
   teleop/nav2 → /cmd_vel → velocity_smoother → /diff_drive_controller/cmd_vel
+  With motion_supervision_enabled:=true, only leased motion_supervisor commands
+  feed the controller; raw cmd_vel and the legacy smoother are disconnected.
+
   diff_drive_controller  →  /wheel_odom       (nav_msgs/Odometry, 50 Hz)
   joint_state_broadcaster →  /joint_states   (sensor_msgs/JointState, 50 Hz)
 
@@ -26,6 +29,7 @@ Usage:
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, TimerAction
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
+from launch.conditions import IfCondition, UnlessCondition
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
@@ -36,8 +40,15 @@ def generate_launch_description():
     controllers_yaml = PathJoinSubstitution([pkg, "config", "controllers.yaml"])
     smoother_yaml = PathJoinSubstitution([pkg, "config", "velocity_smoother.yaml"])
 
+    supervised = LaunchConfiguration("motion_supervision_enabled")
+
     # Launch arguments
     declared_args = [
+        DeclareLaunchArgument('motion_health_scan_topic',default_value='scan'),
+        DeclareLaunchArgument('motion_health_enabled',default_value='false',
+            description='Require direct scan/odometry/map localization health for all motion leases'),
+        DeclareLaunchArgument("motion_supervision_enabled", default_value="false",
+            description="Use exclusive leased motion commands; raw cmd_vel is ignored"),
         DeclareLaunchArgument(
             "use_sim_time",
             default_value="true",
@@ -73,6 +84,7 @@ def generate_launch_description():
         package="nav2_velocity_smoother",
         executable="velocity_smoother",
         name="velocity_smoother",
+        condition=UnlessCondition(supervised),
         parameters=[
             smoother_yaml,
             {"use_sim_time": LaunchConfiguration("use_sim_time")},
@@ -89,6 +101,7 @@ def generate_launch_description():
         package="nav2_lifecycle_manager",
         executable="lifecycle_manager",
         name="lifecycle_manager_control",
+        condition=UnlessCondition(supervised),
         output="screen",
         parameters=[{
             "autostart": True,
@@ -104,11 +117,24 @@ def generate_launch_description():
         actions=[lifecycle_manager],
     )
 
+    # Opt-in direct supervisor -> controller. Never run the legacy smoother in parallel.
+    # Driver velocity/acceleration limits and its command timeout still apply.
+    motion_supervisor = Node(
+        package="rlai_motion_supervisor", executable="motion_supervisor",
+        name="motion_supervisor", condition=IfCondition(supervised),
+        parameters=[{"use_sim_time": LaunchConfiguration("use_sim_time"),
+                     "health_required": LaunchConfiguration("motion_health_enabled"),
+                     "health_scan_topic": LaunchConfiguration("motion_health_scan_topic")}],
+        remappings=[("motion_supervisor/drive", "/diff_drive_controller/cmd_vel")],
+        output="screen",
+    )
+
     return LaunchDescription(
         declared_args + [
             joint_state_broadcaster_spawner,
             diff_drive_spawner,
             velocity_smoother,
+            motion_supervisor,
             lifecycle_manager_delayed,
         ]
     )

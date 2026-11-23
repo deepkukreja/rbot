@@ -39,6 +39,14 @@ def _as_bool(context, name):
 
 
 def _validate_global_localization(context):
+    if _as_bool(context, 'motion_health_enabled') and (not _as_bool(context, 'use_amcl') or not LaunchConfiguration('map_yaml_file').perform(context)):
+        raise RuntimeError('Guarded motion requires AMCL and an explicit map_yaml_file')
+    if _as_bool(context, 'motion_health_enabled') and not _as_bool(context, 'motion_supervision_enabled'):
+        raise RuntimeError('motion_health_enabled requires motion_supervision_enabled')
+    if _as_bool(context, "motion_supervision_enabled") and _as_bool(context, "teleop_enabled"):
+        raise RuntimeError(
+            "The supervised profile requires lease-aware control; legacy joystick and toggle e_stop are disabled"
+        )
     if _as_bool(context, "mapping_enabled") and _as_bool(context, "use_amcl"):
         raise RuntimeError(
             "mapping_enabled and use_amcl cannot both be true because both publish map->odom"
@@ -50,6 +58,12 @@ def generate_launch_description():
 
     # Launch arguments
     declared_args = [
+        DeclareLaunchArgument('bridge_scan_topic',default_value='scan',
+            description='ROS output topic of the Gazebo 2D scan bridge'),
+        DeclareLaunchArgument('motion_health_scan_topic',default_value='scan'),
+        DeclareLaunchArgument('motion_health_enabled',default_value='false'),
+        DeclareLaunchArgument("motion_supervision_enabled", default_value="false",
+            description="Enable local leased command ownership; raw cmd_vel is ignored"),
         DeclareLaunchArgument(
             "simulator",
             default_value="gazebo",
@@ -122,6 +136,10 @@ def generate_launch_description():
     ]
 
     forward_args = {
+        'bridge_scan_topic':LaunchConfiguration('bridge_scan_topic'),
+        'motion_health_scan_topic':LaunchConfiguration('motion_health_scan_topic'),
+        'motion_health_enabled': LaunchConfiguration('motion_health_enabled'),
+        "motion_supervision_enabled": LaunchConfiguration("motion_supervision_enabled"),
         "world":                 LaunchConfiguration("world"),
         "x":                     LaunchConfiguration("x"),
         "y":                     LaunchConfiguration("y"),
@@ -194,6 +212,17 @@ def generate_launch_description():
         condition=IfCondition(LaunchConfiguration("camera_processing_enabled")),
     )
 
+    # The 3D sensor toggle starts its existing cloud filter as well as the sensor.
+    lidar_processing_bringup = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution(
+                [FindPackageShare("rlai_lidar_processing"), "launch", "lidar_processing.launch.py"]
+            )
+        ),
+        launch_arguments={"use_sim_time": "true"}.items(),
+        condition=IfCondition(LaunchConfiguration("lidar_3d_enabled")),
+    )
+
     # Do not enable mapping and AMCL together; both publish map->odom.
     mapping_bringup = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -217,6 +246,7 @@ def generate_launch_description():
             teleop_bringup,
             localization_bringup,
             camera_processing_bringup,
+            lidar_processing_bringup,
             mapping_bringup,
         ]
     )

@@ -278,3 +278,16 @@ def test_bringup_forwards_extra_gz_resource_path():
     assert "extra_gz_resource_path" in constants
     assert "DeclareLaunchArgument" in calls
     assert include_launch_forwards_arg(tree, "extra_gz_resource_path")
+
+
+def test_mesh_consumers_declare_their_runtime_dependency():
+    manifests = (
+        GAZEBO / "package.xml",
+        ROOT / "src/robot/rlai_description/package.xml",
+    )
+    for manifest in manifests:
+        dependencies = {
+            item.text for item in parse_xml(manifest)
+            if item.tag in {"depend", "exec_depend"}
+        }
+        assert "rlai_meshes" in dependencies, f"missing mesh dependency in {manifest.name} for {manifest.parent.name}"

@@ -31,6 +31,7 @@ setup(
     entry_points={
         'console_scripts': [
             'nav_client = rlai_navigation.nav_client:main',
+            'scan_occlusion = rlai_navigation.scan_occlusion:main',
         ],
     },
 )
